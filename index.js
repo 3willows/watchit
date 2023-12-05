@@ -3,22 +3,30 @@
 const debounce = require('lodash.debounce');
 const chokidar = require('chokidar');
 const program = require('caporal');
-
-console.log('hi there, index.js is running');
+const fs = require('fs');
+const { spawn } = require('child_process');
 
 program
   .version('0.0.1')
   .argument('[filename]', 'Name of a file to execute')
-  .action((args) => {
+  .action(async ({ filename }) => {
+    const name = filename || 'index.js';
+
+    try {
+      await fs.promises.access(name);
+    } catch (err) {
+      throw new Error(`could not find the file ${name}`)
+    }
     const start = debounce(() => {
-      console.log("starting users' programme")
+      console.log('index.js has run one cycle')
+      spawn('node', [name], {stdio: 'inherit'});
     }, 100);
-    
+
     chokidar
       .watch('.')
-      .on('add', () => start)
-      .on('change', () => console.log("FILE CHANGED"))
-      .on('unlink', () => console.log("FILE UNLINKED"));
+      .on('add', start)
+      .on('change', start)
+      .on('unlink', start);
   });
 
 program.parse(process.argv)
